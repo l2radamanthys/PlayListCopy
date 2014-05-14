@@ -3,10 +3,7 @@ import Tkinter as tk
 import ttk
 from tkFileDialog import askopenfilename, askdirectory
 import tkMessageBox
-import shutil
-import os
-import datetime
-
+from copy import CopyProcess
 
 ftypes = (('M3U Play List','*.m3u'), ('Todos los Formatos', '*'))
 
@@ -24,7 +21,7 @@ class MainFrame(tk.Frame):
         txt_plpath = tk.Entry(self, textvariable=self.pl_path, width=60)
         txt_plpath.grid(row=1, column=0)     
 
-        btn_plsearch = tk.Button(self, text="Seleccionar", command=self.select_playlist)
+        btn_plsearch = tk.Button(self, text="Seleccionar", command=self.select_playlist, pady=3)
         btn_plsearch.grid(row=1, column=1, padx=5)
         
         lbl2 = tk.Label(self, text="Carpeta Destino")
@@ -34,7 +31,7 @@ class MainFrame(tk.Frame):
         txt_folder_path = tk.Entry(self, textvariable=self.folder_path, width=60)
         txt_folder_path.grid(row=3, column=0)
 
-        btn_folder_search = tk.Button(self, text="Seleccionar", command=self.select_dest_folder)
+        btn_folder_search = tk.Button(self, text="Seleccionar", command=self.select_dest_folder, pady=3)
         btn_folder_search.grid(row=3, column=1, padx=5)
 
         btn_copy = tk.Button(self, text="Copiar Archivos", command=self.copy_files, padx=5, pady=5)
@@ -55,7 +52,6 @@ class MainFrame(tk.Frame):
 
     def copy_files(self):
         run = True
-
         #asegurando que la lista de reproducion exista
         try:
             data = open(self.pl_path.get(), 'r').readlines()
@@ -67,6 +63,7 @@ class MainFrame(tk.Frame):
         
         if self.folder_path.get() != None:
             _folder = self.folder_path.get()
+
         else:
             run = False
 
@@ -81,52 +78,36 @@ class CopyFrame(tk.Frame):
         tk.Frame.__init__(self, master=root)
         self.pack()
         #self.title('Copiando Archivos..')
-        self.data = files 
-        self.folder = folder
-        self.n_files = len(self.data)
-        self.pos = 0
-
 
         lbl = tk.Label(self, text="Progreso..")
-        lbl.grid(row=0, pady=5, padx=10, sticky=tk.W)
+        lbl.grid(row=0, pady=10, padx=10, sticky=tk.W)
 
-        self.gauge = ttk.Progressbar(self, orient=tk.HORIZONTAL, length=600, maximum=self.n_files)
-        self.gauge.grid(row=1, pady=10, padx=10)
+        self.gauge = ttk.Progressbar(self, orient=tk.HORIZONTAL, length=600, maximum=len(files))
+        self.gauge.grid(row=1, padx=10)
 
         self.blist = tk.Listbox(self, width=100, height=10)
-        self.blist.grid(row=2)
+        self.blist.grid(row=2, padx=10, pady=20)
         
        # btn = tk.Button(self, text="Copiar", command=self.on_copy, padx=5, pady=5)
        # btn.grid(row=5)
         
         self.copylog = open('copylog.txt', 'a')
+
+        
+        self.copy = CopyProcess(files, folder, self.blist, self.gauge, self.copylog) 
+        self.copy.start()
         self.run_copy()
 
     
     def run_copy(self):
-        if self.pos < self.n_files:
-            path = self.data[self.pos][:-1]
-            _file = path.split('\\')[-1]
-
             #moviendo archivo
-            try:
-                npath = os.path.join(self.folder, _file)
-                shutil.copy(path, npath)
-                self.blist.insert(tk.END, "[%s] %s" %(str(self.pos+1).zfill(3), _file))
+        if self.copy.is_run:
+            self.master.after(100, self.run_copy)
 
-            except:
-                time = datetime.datetime.now().strftime("[%d-%m-%Y %H:%M:%S]") 
-                text = "%s - ERROR AL COPIAR: %s \n" %(time, path)
-                self.copylog.write(text)
-                self.blist.insert(tk.END, "[%s] ERROR %s" %(str(self.pos+1).zfill(3), _file))
-            
-            self.gauge.step()
-            self.pos += 1
-            self.master.after(10, self.run_copy)
         else:
             tkMessageBox.showinfo('Informacion', 'Finalizo el Copiado')
             self.copylog.close()
-            self.destroy()
+            self.master.destroy()
 
 
 
