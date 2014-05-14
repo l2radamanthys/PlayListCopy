@@ -4,7 +4,8 @@ import ttk
 from tkFileDialog import askopenfilename, askdirectory
 import tkMessageBox
 import shutil
-import time
+import os
+import datetime
 
 
 ftypes = (('M3U Play List','*.m3u'), ('Todos los Formatos', '*'))
@@ -64,12 +65,14 @@ class MainFrame(tk.Frame):
             run = False
             print "Error Archivo inecistente"
         
-        #confirmando ruta Destino
-        #pass
+        if self.folder_path.get() != None:
+            _folder = self.folder_path.get()
+        else:
+            run = False
 
         if run:
             self.new_window = tk.Toplevel(self.master)
-            self.copy_app = CopyFrame(root=self.new_window, files=data, folder="") 
+            self.copy_app = CopyFrame(root=self.new_window, files=data, folder=_folder) 
 
 
 
@@ -95,7 +98,8 @@ class CopyFrame(tk.Frame):
         
        # btn = tk.Button(self, text="Copiar", command=self.on_copy, padx=5, pady=5)
        # btn.grid(row=5)
-
+        
+        self.copylog = open('copylog.txt', 'a')
         self.run_copy()
 
     
@@ -103,15 +107,25 @@ class CopyFrame(tk.Frame):
         if self.pos < self.n_files:
             path = self.data[self.pos][:-1]
             _file = path.split('\\')[-1]
-            npath = self.folder + "\\" + _file
+
             #moviendo archivo
-            shutil.copy(path, npath)
+            try:
+                npath = os.path.join(self.folder, _file)
+                shutil.copy(path, npath)
+                self.blist.insert(tk.END, "[%s] %s" %(str(self.pos+1).zfill(3), _file))
+
+            except:
+                time = datetime.datetime.now().strftime("[%d-%m-%Y %H:%M:%S]") 
+                text = "%s - ERROR AL COPIAR: %s \n" %(time, path)
+                self.copylog.write(text)
+                self.blist.insert(tk.END, "[%s] ERROR %s" %(str(self.pos+1).zfill(3), _file))
+            
             self.gauge.step()
-            self.blist.insert(tk.END, "[%s] %s" %(str(self.pos+1).zfill(3), _file))
             self.pos += 1
             self.master.after(10, self.run_copy)
         else:
             tkMessageBox.showinfo('Informacion', 'Finalizo el Copiado')
+            self.copylog.close()
             self.destroy()
 
 
